@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from "react";
 import TaskForm from "./TaskForm";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faCheck, faUndo } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faCheck, faUndo, faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
+import { motion, AnimatePresence } from "framer-motion";
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
 
-  // Load from localStorage
+  // Load tasks from localStorage on mount
   useEffect(() => {
     const storedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
     setTasks(storedTasks);
   }, []);
 
-  // Save to localStorage
+  // Save to localStorage whenever tasks change
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
@@ -54,17 +57,41 @@ const TaskList = () => {
     setFilter(status);
   };
 
-  const filteredTasks =
-    filter === "all"
-      ? tasks
-      : tasks.filter((task) =>
-          filter === "completed" ? task.completed : !task.completed
-        );
+  const filteredTasks = tasks
+    .filter((task) =>
+      filter === "all"
+        ? true
+        : filter === "completed"
+        ? task.completed
+        : !task.completed
+    )
+    .filter((task) =>
+      task.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   return (
-    <div>
+    <div className={darkMode ? "dark" : ""}>
+      <button
+        className="theme-toggle"
+        onClick={() => setDarkMode(!darkMode)}
+        style={{ margin: "1rem" }}
+      >
+        <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />{" "}
+        {darkMode ? "Light Mode" : "Dark Mode"}
+      </button>
+
       <h2>Task Dashboard</h2>
+
       <TaskForm onAddTask={handleAddTask} />
+
+      <div className="search-bar">
+        <input
+          type="text"
+          placeholder="Search tasks..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
       <div className="filter-buttons">
         <button onClick={() => handleFilterChange("all")}>All</button>
@@ -75,31 +102,48 @@ const TaskList = () => {
       {filteredTasks.length === 0 ? (
         <p style={{ textAlign: "center" }}>No tasks yet</p>
       ) : (
-        <ul>
-          {filteredTasks.map((task) => (
-            <li
-              key={task.id}
-              className={task.completed ? "completed-task" : ""}
-            >
-              <strong>{task.title}</strong> — {task.description || "No description"}
-              <br />
-              <small>Created: {new Date(task.createdAt).toLocaleString()}</small>
-              <br />
-              <div className="task-buttons">
-                <button onClick={() => handleToggleComplete(task.id)}>
-                  <FontAwesomeIcon icon={task.completed ? faUndo : faCheck} />{" "}
-                  {task.completed ? "Pending" : "Done"}
-                </button>
-                <button onClick={() => handleEditTask(task.id)}>
-                  <FontAwesomeIcon icon={faEdit} /> Edit
-                </button>
-                <button onClick={() => handleDeleteTask(task.id)}>
-                  <FontAwesomeIcon icon={faTrash} /> Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <AnimatePresence>
+          <motion.ul
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {filteredTasks.map((task) => (
+              <motion.li
+                key={task.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className={task.completed ? "completed-task" : ""}
+              >
+                <strong>{task.title}</strong> —{" "}
+                {task.description || "No description"}
+                <br />
+                <small>
+                  Created: {new Date(task.createdAt).toLocaleString()}
+                </small>
+                <br />
+                <div className="task-buttons">
+                  <button onClick={() => handleToggleComplete(task.id)}>
+                    <FontAwesomeIcon
+                      icon={task.completed ? faUndo : faCheck}
+                    />{" "}
+                    {task.completed ? "Pending" : "Done"}
+                  </button>
+                  <button onClick={() => handleEditTask(task.id)}>
+                    <FontAwesomeIcon icon={faEdit} /> Edit
+                  </button>
+                  <button onClick={() => handleDeleteTask(task.id)}>
+                    <FontAwesomeIcon icon={faTrash} /> Delete
+                  </button>
+                </div>
+              </motion.li>
+            ))}
+          </motion.ul>
+        </AnimatePresence>
       )}
     </div>
   );
